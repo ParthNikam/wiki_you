@@ -1,7 +1,9 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+
 
 
 export async function login(formData: FormData) {
@@ -24,6 +26,7 @@ export async function login(formData: FormData) {
 
 export async function signup(formData: FormData) {
   const supabase = await createClient()
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
   
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -38,7 +41,7 @@ export async function signup(formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
+      emailRedirectTo: `${siteUrl}/auth/confirm`,
     },
   })
 
@@ -53,11 +56,12 @@ export async function signup(formData: FormData) {
 
 export async function signInWithGoogle() {
   const supabase = await createClient()
-  console.log('signing in with google')
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectTo: `${siteUrl}/auth/callback`,
     },
   })
 
@@ -66,7 +70,6 @@ export async function signInWithGoogle() {
   }
 
   if (data.url) {
-    console.log(data.url)
     redirect(data.url)
   }
 }

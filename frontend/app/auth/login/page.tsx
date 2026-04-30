@@ -2,19 +2,13 @@
 
 import { login, signup, signInWithGoogle } from '@/lib/auth/actions'
 import { useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export default function AuthPage() {
   const searchParams = useSearchParams()
   const message = searchParams.get('message')
   const signupParam = searchParams.get('signup')
-  const [isSignup, setIsSignup] = useState(false)
-
-  useEffect(() => {
-    if (signupParam === 'true') {
-      setIsSignup(true)
-    }
-  }, [signupParam])
+  const [isSignup, setIsSignup] = useState(signupParam === 'true')
 
   return (
     <div className="bg-black flex flex-col justify-center h-screen items-center px-4">
