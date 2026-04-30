@@ -18,7 +18,7 @@ export async function login(formData: FormData) {
     redirect('/auth/login?message=' + encodeURIComponent(error.message))
   }
 
-  redirect('/') // Go to protected home page
+  redirect('/dashboard') // Go to protected home page
 }
 
 
@@ -53,7 +53,7 @@ export async function signup(formData: FormData) {
 
 export async function signInWithGoogle() {
   const supabase = await createClient()
-
+  console.log('signing in with google')
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -66,6 +66,7 @@ export async function signInWithGoogle() {
   }
 
   if (data.url) {
+    console.log(data.url)
     redirect(data.url)
   }
 }

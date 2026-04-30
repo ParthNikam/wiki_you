@@ -1,33 +1,33 @@
 'use client'
 
-import { useUser } from '@/app/providers'
-import { ProtectedPageWrapper } from '@/components/protected-page-wrapper'
-import { LogoutButton } from '@/components/logout-button'
+// import { useUser } from '@/app/providers'
+// import { ProtectedPageWrapper } from '@/components/protected-page-wrapper'
+// import { LogoutButton } from '@/components/logout-button'
 
 export default function DashboardPage() {
-  const { user } = useUser()
+  // const { user } = useUser()
 
   return (
-    <ProtectedPageWrapper>
+    // <ProtectedPageWrapper>
       <div className="min-h-screen bg-black">
         <header className="border-b border-gray-800 bg-gray-900">
           <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
             <h1 className="text-2xl font-bold text-white">Wiki You</h1>
             <div className="flex items-center gap-4">
-              {user && (
+              {/* {user && ( */}
                 <>
                   <div className="text-right">
-                    <div className="text-white font-semibold">{user.email}</div>
+                    {/* <div className="text-white font-semibold">{user.email}</div> */}
                     <div className="text-gray-400 text-sm">Account</div>
                   </div>
-                  <LogoutButton />
+                  {/* <LogoutButton /> */}
                 </>
-              )}
+              {/* )} */}
             </div>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-6 py-12">
+        {/* <main className="max-w-7xl mx-auto px-6 py-12">
           <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
             <h2 className="text-3xl font-bold text-white mb-4">Welcome Back!</h2>
             <p className="text-gray-300 mb-6">
@@ -65,8 +65,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </main>
+        </main> */}
       </div>
-    </ProtectedPageWrapper>
+    // </ProtectedPageWrapper>
   )
 }
