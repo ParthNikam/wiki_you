@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from v1.modules.vectorstore import get_vectorstore
-from v1.modules.query import smart_query
-from v1.modules.vectorstore import add_new_document
+from modules.vectorstore import get_vectorstore
+from modules.query import smart_query
+from modules.vectorstore import add_new_document
 import os
 from dotenv import load_dotenv
 
