@@ -15,16 +15,16 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 load_dotenv()
 
 
-MEMORY_DIR = Path("./memory")
-WIKI_DIR = Path("./wiki")
-INDEX_DIR = Path("./memory_index_1")
+MEMORY_DIR = Path("./md_files")
+WIKI_DIR = Path("./gpt_wiki")
+INDEX_DIR = Path("./memory_index")
 
 WIKI_DIR.mkdir(parents=True, exist_ok=True)
 
 
 embeddings = HuggingFaceEmbeddings(
     model_name="all-MiniLM-L6-v2",
-    model_kwargs={"device": "cpu"},
+    model_kwargs={"device": "cuda"},
 )
 
 _splitter = RecursiveCharacterTextSplitter(
@@ -113,7 +113,7 @@ def rebuild_index(wiki_dir: Path = WIKI_DIR) -> Path:
 def _build_wiki_content(doc: Document) -> str:
     source_name = Path(doc.metadata.get("source", "unknown")).name
     prompt = ChatPromptTemplate.from_template(
-        "Summarize this markdown note into a short wiki page with sections for "
+        "Summarize this markdown note into a wiki page with sections for "
         "Title, Overview, Notes, and Source.\n\nDocument:\n{text}"
     )
 
@@ -143,6 +143,7 @@ def generate_wiki_pages(docs: list[Document]) -> list[Path]:
         content = _build_wiki_content(doc)
         path.write_text(content, encoding="utf-8")
         created_paths.append(path)
+        print(f"created wiki for {path}")
 
     rebuild_index(WIKI_DIR)
     return created_paths
@@ -206,6 +207,8 @@ def ask(query: str) -> str:
 
 
 if __name__ == "__main__":
-    initialize_database()
+    # initialize_database()
+    answer = ask("who was the girl I really liked?")
+    print(answer)
 
-    
+

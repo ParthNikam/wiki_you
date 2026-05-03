@@ -13,13 +13,16 @@ from langchain_groq import ChatGroq
 load_dotenv()
 
 # --- Paths & Global Config ---
-DB_DIR = "faiss_index"
-WIKI_DIR = Path("wiki_store")
-MEMORY_DIR = Path("memory")
-WIKI_DIR.mkdir(exist_ok=True)
+DB_DIR = Path("faiss_index")
+WIKI_DIR = Path("gemini_wiki")
+MEMORY_DIR = Path("md_files")
+WIKI_DIR.mkdir(exist_ok=True)   
 
 # Initialize Embeddings (miniLM is fast and local)
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = HuggingFaceEmbeddings(
+    model_name="all-MiniLM-L6-v2",
+    model_kwargs={"device": "cuda"},
+)
 
 
 def get_vectorstore():
@@ -134,7 +137,7 @@ def smart_query(question):
 
 # --- Usage Example ---
 # On first run, it builds. On second run, it's instant.
-# answer = smart_query("What are my core personality traits?")
-# print(answer)
+answer = smart_query("what did I learn when I was in 10th grade?")
+print(answer)
 
-initialize_database()
+# initialize_database()
