@@ -2,34 +2,47 @@
 
 import { useAuth } from "@/app/providers";
 import { Input } from "@/components/ui/input";
-import { useRouter, redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function DashboardPage() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const userData = user?.user_metadata;
-
   const [input, setInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   const handleInput = async (data: string) => {
-    // post input to api/query
-    const formData = new FormData()
-    formData.append('message',data)
-    formData.append('sender', user?.id || "ai")
-    formData.append('type', 'message')
+    const trimmedInput = data.trim();
+    if (!trimmedInput || isSubmitting) {
+      return;
+    }
 
-    const res = await fetch('/api/query', {
-      method: 'POST',
-      body: formData,
-    })
+    setIsSubmitting(true);
 
-    const result = await res.json();
-    
-    if (result.chat_id) {
-      console.log("recieved chat_id, pushing to ", result.chat_id);
-      router.push(`dashboard/s/${result.chat_id}`)
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        body: JSON.stringify({
+          message: trimmedInput,
+          sender: user?.id || "ai"
+        }),
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok) {
+        throw new Error(payload.error || "Failed to create chat.");
+      }
+
+      if (payload.chat_id) {
+        setInput("");
+        router.push(`/dashboard/s/${payload.chat_id}`);
+      }
+    } catch (error) {
+      console.error("Failed to create chat:", error);
+    } finally {
+      setIsSubmitting(false);
     }
 
   };
@@ -45,9 +58,10 @@ export default function DashboardPage() {
         handleInput(input);
       }}>
         <Input
-          className="w-2xl p-4 border-none bg-white"
+          className="w-2xl p-4 text-xl rounded-xl border-none bg-white"
           id="text-input"
           value={input}
+          disabled={isSubmitting}
           onChange={(e) => {setInput(e.target.value)}}
           placeholder="What should we learn today?"
         />

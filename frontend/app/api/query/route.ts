@@ -1,58 +1,44 @@
-'use server'
-
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { revalidatePath } from "next/cache";
 
-const BASE_URL = "127.0.0.1:8000"
+const BASE_URL = "127.0.0.1:8000";
 
-// post data to supabase
-export async function POST(req:Request) {
-    const supabase =  await createClient()
+const generateResponse = async (message: string) => {
+  return "your ai generated message";
+};
 
-    const formData = await req.formData()
+export async function POST(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { chat_id, message, sender} = await req.json();
 
-    console.log(formData)
+    // insert user message
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ chat_id, message, sender, type: "user" })
+      .select()
+      .single();
+  
 
-    const message = formData.get('message') as string
-    const type = formData.get('type') as string
-    const sender = formData.get('sender') as string
+    if (error) throw(error)
+      
+    // get ai response
+    const aiText = await generateResponse(message);
 
-    // create a chat in the chats table
-    const {data: chat, error: chatError} = await supabase
-    .from('chats')
-    .insert([{}])
-    .select()
-    .single()
+    // insert ai response into database 
+    await supabase
+      .from("messages")
+      .insert({ chat_id, message: aiText, sender, type: "ai"})
+      .select()
+      .single();
 
-    if (chatError) return Response.json({error: chatError.message})
-    console.log("backend created chat", chat.id)
+    return Response.json({ success: true, message: aiText });
 
-    // insert message to messages table
-    const {data, error} = await supabase
-    .from('messages')
-    .insert([{
-        message,
-        type, 
-        sender, 
-        chat_id: chat.id
-    }])
-    .select()
-
-    
-    if(error) return Response.json({error: error.message})
-    console.log("backend created message")
-
-    return Response.json({success: true, chat_id: chat.id, data:data})
-
+  } catch (err: any) {
+    console.error("Route Crash:", err);
+    return Response.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
 }
-
-
-// store query into supabase 
-// get back an id
-
-// POST query to backend 
-// get back a response 
-
-
-
