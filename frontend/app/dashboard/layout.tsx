@@ -8,7 +8,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
 
       <div className="w-screen bg-black">
-        <SidebarTrigger className="bg-white rounded-lg"/>
+        {/* <SidebarTrigger className="bg-white rounded-lg"/> */}
         {children}
       </div>
     </SidebarProvider>

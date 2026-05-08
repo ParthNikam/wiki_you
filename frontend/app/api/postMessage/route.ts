@@ -1,10 +1,7 @@
 'use server'
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-
-const BASE_URL = "127.0.0.1:8000"
+import { createClient } from "@/utils/supabase/server";
 
 // post data to supabase
 export async function POST(req:Request) {
@@ -15,35 +12,30 @@ export async function POST(req:Request) {
     console.log(formData)
 
     const message = formData.get('message') as string
-    const type = formData.get('type') as string
     const sender = formData.get('sender') as string
+    const chatid = formData.get('chatid') as string
 
-    // create a chat in the chats table
-    const {data: chat, error: chatError} = await supabase
-    .from('chats')
-    .insert([{}])
-    .select()
-    .single()
-
-    if (chatError) return Response.json({error: chatError.message})
-    console.log("backend created chat", chat.id)
+    if (!message?.trim() || !sender || !chatid) {
+        return Response.json({ error: "Missing required fields" }, { status: 400 })
+    }
 
     // insert message to messages table
     const {data, error} = await supabase
     .from('messages')
     .insert([{
         message,
-        type, 
         sender, 
-        chat_id: chat.id
+        chat_id: chatid
     }])
     .select()
 
     
-    if(error) return Response.json({error: error.message})
+    if(error) return Response.json({error: error.message}, { status: 400 })
     console.log("backend created message")
 
-    return Response.json({success: true, chat_id: chat.id, data:data})
+    revalidatePath(`/dashboard/chat/${chatid}`)
+
+    return Response.json({success: true, data})
 
 }
 
