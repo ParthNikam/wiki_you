@@ -1,24 +1,34 @@
 "use client";
 
-import { SubmitEvent, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { SubmitEvent, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 
 type ChatMessageFormProps = {
   chatId: string;
+  disabled?: boolean;
+  onSendMessage?: (message: string) => Promise<void>;
 };
 
-export function ChatMessageForm({ chatId }: ChatMessageFormProps) {
-  const router = useRouter();
+export function ChatMessageForm({
+  chatId,
+  disabled = false,
+  onSendMessage,
+}: ChatMessageFormProps) {
   const [message, setMessage] = useState("");
-  const [isPending, startTransition] = useTransition();
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedMessage = message.trim();
     if (!trimmedMessage) {
+      return;
+    }
+
+    setMessage("");
+
+    if (onSendMessage) {
+      await onSendMessage(trimmedMessage);
       return;
     }
 
@@ -34,13 +44,9 @@ export function ChatMessageForm({ chatId }: ChatMessageFormProps) {
 
     if (!response.ok) {
       console.error("Failed to post message");
+      setMessage(trimmedMessage);
       return;
     }
-
-    setMessage("");
-    startTransition(() => {
-      router.refresh();
-    });
   };
 
   return (
@@ -51,7 +57,7 @@ export function ChatMessageForm({ chatId }: ChatMessageFormProps) {
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         placeholder="What should we learn today?"
-        disabled={isPending}
+        disabled={disabled}
       />
     </form>
   );

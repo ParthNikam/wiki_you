@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 
-import { ChatMessageForm } from "@/components/chat-message-form";
+import { ChatThread } from "@/components/chat-thread";
 import { getChatPageData } from "@/lib/get-chat";
 
 type ChatPageProps = {
@@ -33,47 +33,11 @@ export default async function ChatPage({ params }: ChatPageProps) {
         </h1>
       </div>
 
-      <div className="no-scrollbar flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          {messages.length ? (
-            messages.map((message) => {
-              const isUser = message.sender === "user";
-              const isAi = message.sender === "ai";
-
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    isUser ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                      isUser
-                        ? "bg-white text-black"
-                        : isAi
-                          ? "bg-white/10 text-white"
-                          : "bg-white/5 text-white/80"
-                    }`}
-                  >
-                    {message.message}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="py-12 text-center text-sm text-white/60">
-              No messages yet. Start the conversation below.
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="border-t border-white/10 px-6 pb-4">
-        <div className="mx-auto w-full max-w-3xl">
-          <ChatMessageForm chatId={id} />
-        </div>
-      </div>
+      <ChatThread
+        key={`${id}-${messages.length}-${messages.at(-1)?.id ?? "empty"}`}
+        chatId={id}
+        initialMessages={messages}
+      />
     </div>
   );
 }

@@ -5,16 +5,13 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import Link from "next/link";
+import { ChatSidebarMenu } from "@/components/chat-sidebar-menu";
 
 export async function AppSidebar() {
 
@@ -39,26 +36,7 @@ export async function AppSidebar() {
     </SidebarHeader>
     
       <SidebarContent>
-        <SidebarGroup>
-            <SidebarGroupLabel className="text-md">Chats</SidebarGroupLabel>
-            <SidebarMenu>
-              {chats?.map((chat) => (
-                <SidebarMenuItem key={chat.id}>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/dashboard/chat/${chat.id}`}>
-                      <span className="text-black text-bold">{chat.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-
-              {chats?.length === 0 && (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No chats found
-                </div>
-              )}
-            </SidebarMenu>
-        </SidebarGroup>
+        <ChatSidebarMenu chats={chats ?? []} />
 
         <SidebarGroup>
             <SidebarGroupLabel className="text-md">Files</SidebarGroupLabel>
