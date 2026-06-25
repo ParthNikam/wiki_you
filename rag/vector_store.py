@@ -1,9 +1,7 @@
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 import json
-
-import faiss
-import numpy as np
 
 
 @dataclass(frozen=True)
@@ -20,11 +18,13 @@ class FaissStore:
         """Keep FAISS vectors and JSON metadata together."""
         self.index_path = index_path
         self.metadata_path = metadata_path
-        self.index: faiss.Index | None = None
+        self.index: Any | None = None
         self.records: list[ChunkRecord] = []
 
-    def build(self, vectors: np.ndarray, records: list[ChunkRecord]) -> None:
+    def build(self, vectors: Any, records: list[ChunkRecord]) -> None:
         """Build an inner-product index from already-normalized vectors."""
+        import faiss
+
         if len(records) == 0 or vectors.size == 0:
             raise ValueError("Cannot build a vector store with no records.")
 
@@ -35,6 +35,8 @@ class FaissStore:
 
     def save(self) -> None:
         """Persist the FAISS index and chunk metadata to disk."""
+        import faiss
+
         if self.index is None:
             raise ValueError("No FAISS index has been built.")
 
@@ -45,6 +47,8 @@ class FaissStore:
 
     def load(self) -> None:
         """Load the FAISS index and metadata from disk."""
+        import faiss
+
         if not self.index_path.exists() or not self.metadata_path.exists():
             raise FileNotFoundError(f"Missing vector store: {self.index_path}")
 
@@ -52,7 +56,7 @@ class FaissStore:
         raw_records = json.loads(self.metadata_path.read_text(encoding="utf-8"))
         self.records = [ChunkRecord(**record) for record in raw_records]
 
-    def search(self, query_vector: np.ndarray, k: int) -> list[tuple[ChunkRecord, float]]:
+    def search(self, query_vector: Any, k: int) -> list[tuple[ChunkRecord, float]]:
         """Search the vector store and return records with scores."""
         if self.index is None:
             raise ValueError("Vector store is not loaded.")

@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 from rag.config import Settings
-from rag.embeddings import Embedder
-from rag.llm import LLMClient
 from rag.vector_store import ChunkRecord, FaissStore
+
+if TYPE_CHECKING:
+    from rag.embeddings import Embedder
+    from rag.llm import LLMClient
 
 
 CHAT_SYSTEM = """You answer questions from retrieved personal notes.
@@ -29,21 +33,34 @@ def format_context(records: list[tuple[ChunkRecord, float]]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def retrieve(query: str, settings: Settings, embedder: Embedder) -> list[tuple[ChunkRecord, float]]:
+def retrieve(
+    query: str,
+    settings: Settings,
+    embedder: "Embedder",
+    summary_store: FaissStore,
+    memory_store: FaissStore,
+) -> list[tuple[ChunkRecord, float]]:
     """Search summaries first, then original memory notes if summary matches are weak."""
     query_vector = embedder.embed([query])
-    summary_hits = load_store("summaries", settings).search(query_vector, settings.retrieve_k)
+    summary_hits = summary_store.search(query_vector, settings.retrieve_k)
 
     if summary_hits and summary_hits[0][1] >= 0.35:
         return summary_hits
 
-    memory_hits = load_store("memory", settings).search(query_vector, settings.retrieve_k)
+    memory_hits = memory_store.search(query_vector, settings.retrieve_k)
     return summary_hits[:2] + memory_hits
 
 
-def answer_question(question: str, settings: Settings, embedder: Embedder, llm: LLMClient) -> str:
+def answer_question(
+    question: str,
+    settings: Settings,
+    embedder: "Embedder",
+    llm: "LLMClient",
+    summary_store: FaissStore,
+    memory_store: FaissStore,
+) -> str:
     """Retrieve context and ask the LLM for a grounded answer."""
-    hits = retrieve(question, settings, embedder)
+    hits = retrieve(question, settings, embedder, summary_store, memory_store)
     context = format_context(hits)
     prompt = f"""Question:
 {question}
@@ -55,14 +72,36 @@ Context:
 
 def chat_loop(settings: Settings) -> None:
     """Run the interactive command-line chat."""
-    embedder = Embedder(settings.embedding_model)
-    llm = LLMClient(settings.llm_model)
+    try:
+        from rag.embeddings import Embedder
+        from rag.llm import LLMClient
+
+        print("Loading chat indexes...")
+        summary_store = load_store("summaries", settings)
+        memory_store = load_store("memory", settings)
+        print("Loading embedding model...")
+        embedder = Embedder(settings.embedding_model)
+        llm = LLMClient(settings.llm_model)
+    except FileNotFoundError as exc:
+        print(f"Chat index is missing: {exc}")
+        print("Run `python summarize.py` first to build the summary and memory indexes.")
+        return
+    except ModuleNotFoundError as exc:
+        print(f"Missing Python dependency: {exc.name}")
+        print("Install project dependencies with `pip install -r requirements.txt` in the active environment.")
+        return
+
     print("Wiki You chat. Type 'exit' or 'quit' to stop.")
 
-    while True:
-        question = input("\nYou: ").strip()
-        if question.lower() in {"exit", "quit"}:
-            break
-        if not question:
-            continue
-        print(f"\nAssistant: {answer_question(question, settings, embedder, llm)}")
+    try:
+        while True:
+            question = input("\nYou: ").strip()
+            if question.lower() in {"exit", "quit"}:
+                print("Goodbye.")
+                break
+            if not question:
+                continue
+            answer = answer_question(question, settings, embedder, llm, summary_store, memory_store)
+            print(f"\nAssistant: {answer}")
+    except (EOFError, KeyboardInterrupt):
+        print("\nGoodbye.")

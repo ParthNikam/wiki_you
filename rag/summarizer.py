@@ -1,18 +1,21 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from rag.chunking import chunk_text
 from rag.config import Settings, ensure_dirs
 from rag.documents import Document, list_markdown_files, read_document, summary_path_for, write_text
-from rag.embeddings import Embedder
-from rag.llm import LLMClient
-from rag.vector_store import ChunkRecord, FaissStore
+from rag.vector_store import ChunkRecord
+
+if TYPE_CHECKING:
+    from rag.embeddings import Embedder
+    from rag.llm import LLMClient
 
 
 SUMMARY_SYSTEM = """You summarize personal markdown notes into accurate retrieval notes.
 Extract only information supported by the source. Keep names, events, actions, ideas, dates, and emotional context when present."""
 
 
-def summarize_chunk(llm: LLMClient, document: Document, chunk: str, chunk_no: int) -> str:
+def summarize_chunk(llm: "LLMClient", document: Document, chunk: str, chunk_no: int) -> str:
     """Summarize one chunk into structured bullets."""
     prompt = f"""Source file: {document.path.name}
 Chunk: {chunk_no}
@@ -29,7 +32,7 @@ Content:
     return llm.complete(SUMMARY_SYSTEM, prompt)
 
 
-def merge_summaries(llm: LLMClient, document: Document, chunk_summaries: list[str]) -> str:
+def merge_summaries(llm: "LLMClient", document: Document, chunk_summaries: list[str]) -> str:
     """Merge chunk summaries into one final file summary."""
     joined = "\n\n---\n\n".join(chunk_summaries)
     prompt = f"""Source file: {document.path.name}
@@ -51,7 +54,7 @@ Chunk notes:
     return llm.complete(SUMMARY_SYSTEM, prompt)
 
 
-def summarize_document(llm: LLMClient, settings: Settings, document: Document) -> Path:
+def summarize_document(llm: "LLMClient", settings: Settings, document: Document) -> Path:
     """Create or replace a summary markdown file for one document."""
     chunks = chunk_text(document.text, settings.chunk_size, settings.chunk_overlap)
     chunk_summaries = [
@@ -95,8 +98,10 @@ def make_records(folder: Path, kind: str, settings: Settings) -> list[ChunkRecor
     return records
 
 
-def save_store(name: str, records: list[ChunkRecord], embedder: Embedder, settings: Settings) -> None:
+def save_store(name: str, records: list[ChunkRecord], embedder: "Embedder", settings: Settings) -> None:
     """Embed records and save a FAISS vector store."""
+    from rag.vector_store import FaissStore
+
     vectors = embedder.embed([record.text for record in records])
     store = FaissStore(
         settings.vector_dir / f"{name}.faiss",
@@ -108,15 +113,44 @@ def save_store(name: str, records: list[ChunkRecord], embedder: Embedder, settin
 
 def run_summarization(settings: Settings) -> None:
     """Summarize all memory markdown files and rebuild retrieval indexes."""
+    from rag.llm import LLMClient
+
     ensure_dirs(settings)
     llm = LLMClient(settings.llm_model)
-
+    
     for path in list_markdown_files(settings.memory_dir):
         document = read_document(path)
         if document.text:
+            print(f"\nsummarizing document {document.text[:10]}")
             summarize_document(llm, settings, document)
 
     build_index(settings)
+    from rag.embeddings import Embedder
+
     embedder = Embedder(settings.embedding_model)
     save_store("summaries", make_records(settings.summary_dir, "summary", settings), embedder, settings)
     save_store("memory", make_records(settings.memory_dir, "memory", settings), embedder, settings)
+
+
+def summarize_single_doc(settings: Settings, source_path: Path | None = None) -> Path:
+    """Summarize a single markdown document and rebuild the retrieval index."""
+    from rag.embeddings import Embedder
+    from rag.llm import LLMClient
+
+    ensure_dirs(settings)
+    llm = LLMClient(settings.llm_model)
+    source_path = source_path or settings.memory_dir / "aboutme.md"
+
+    document = read_document(source_path)
+    if not document.text:
+        raise ValueError(f"Document is empty: {source_path}")
+
+    print(f"Summarizing document: {source_path.name}")
+    summarize_document(llm, settings, document)
+    build_index(settings)
+
+    embedder = Embedder(settings.embedding_model)
+    save_store("summaries", make_records(settings.summary_dir, "summary", settings), embedder, settings)
+    save_store("memory", make_records(settings.memory_dir, "memory", settings), embedder, settings)
+
+    return summary_path_for(source_path, settings.summary_dir)
