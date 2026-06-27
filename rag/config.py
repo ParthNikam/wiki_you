@@ -14,7 +14,8 @@ class Settings:
     memory_dir: Path = MEMORY_DIR
     summary_dir: Path = SUMMARY_DIR
     vector_dir: Path = VECTOR_DIR
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_local_files_only: bool = True
     llm_model: str = "gpt-4o-mini"
     chunk_size: int = 2200
     chunk_overlap: int = 250

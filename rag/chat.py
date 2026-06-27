@@ -80,7 +80,10 @@ def chat_loop(settings: Settings) -> None:
         summary_store = load_store("summaries", settings)
         memory_store = load_store("memory", settings)
         print("Loading embedding model...")
-        embedder = Embedder(settings.embedding_model)
+        embedder = Embedder(
+            settings.embedding_model,
+            local_files_only=settings.embedding_local_files_only,
+        )
         llm = LLMClient(settings.llm_model)
     except FileNotFoundError as exc:
         print(f"Chat index is missing: {exc}")

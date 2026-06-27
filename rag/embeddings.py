@@ -2,11 +2,14 @@ from typing import Any
 
 
 class Embedder:
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, model_name: str, local_files_only: bool = True) -> None:
         """Load the Hugging Face embedding model once for reuse."""
         from sentence_transformers import SentenceTransformer
 
-        self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(
+            model_name,
+            local_files_only=local_files_only,
+        )
 
     def embed(self, texts: list[str]) -> Any:
         """Embed text and normalize vectors for cosine-like FAISS search."""

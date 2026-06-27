@@ -67,6 +67,11 @@ def summarize_document(llm: "LLMClient", settings: Settings, document: Document)
     return output_path
 
 
+def summary_exists(settings: Settings, source_path: Path) -> bool:
+    """Check whether a source document already has a generated summary."""
+    return summary_path_for(source_path, settings.summary_dir).exists()
+
+
 def build_index(settings: Settings) -> Path:
     """Create summary/Index.md from generated summary files."""
     rows = ["# Summary Index", ""]
@@ -102,6 +107,7 @@ def save_store(name: str, records: list[ChunkRecord], embedder: "Embedder", sett
     """Embed records and save a FAISS vector store."""
     from rag.vector_store import FaissStore
 
+    print(f"Building {name} vector store from {len(records)} chunks...")
     vectors = embedder.embed([record.text for record in records])
     store = FaissStore(
         settings.vector_dir / f"{name}.faiss",
@@ -109,32 +115,58 @@ def save_store(name: str, records: list[ChunkRecord], embedder: "Embedder", sett
     )
     store.build(vectors, records)
     store.save()
+    print(f"Saved {name} vector store to {settings.vector_dir}")
 
 
-def run_summarization(settings: Settings) -> None:
-    """Summarize all memory markdown files and rebuild retrieval indexes."""
-    from rag.llm import LLMClient
-
+def rebuild_vector_stores(settings: Settings) -> None:
+    """Rebuild retrieval indexes from current summary and memory markdown files."""
     ensure_dirs(settings)
-    llm = LLMClient(settings.llm_model)
-    
-    for path in list_markdown_files(settings.memory_dir):
-        document = read_document(path)
-        if document.text:
-            print(f"\nsummarizing document {document.text[:10]}")
-            summarize_document(llm, settings, document)
+    index_path = build_index(settings)
+    print(f"Updated summary index: {index_path}")
 
-    build_index(settings)
     from rag.embeddings import Embedder
 
-    embedder = Embedder(settings.embedding_model)
+    print(f"Loading embedding model: {settings.embedding_model}")
+    embedder = Embedder(
+        settings.embedding_model,
+        local_files_only=settings.embedding_local_files_only,
+    )
     save_store("summaries", make_records(settings.summary_dir, "summary", settings), embedder, settings)
     save_store("memory", make_records(settings.memory_dir, "memory", settings), embedder, settings)
 
 
+def run_summarization(settings: Settings, skip_existing: bool = True) -> None:
+    """Summarize memory markdown files and rebuild retrieval indexes."""
+    ensure_dirs(settings)
+    paths_to_summarize = [
+        path
+        for path in list_markdown_files(settings.memory_dir)
+        if not skip_existing or not summary_exists(settings, path)
+    ]
+
+    for path in list_markdown_files(settings.memory_dir):
+        if skip_existing and summary_exists(settings, path):
+            print(f"Skipping existing summary: {path.name}")
+    
+    llm = None
+    if paths_to_summarize:
+        from rag.llm import LLMClient
+
+        llm = LLMClient(settings.llm_model)
+
+    for path in paths_to_summarize:
+        document = read_document(path)
+        if document.text:
+            print(f"Summarizing document: {path.name}")
+            if llm is None:
+                raise ValueError("LLM client was not initialized.")
+            summarize_document(llm, settings, document)
+
+    rebuild_vector_stores(settings)
+
+
 def summarize_single_doc(settings: Settings, source_path: Path | None = None) -> Path:
     """Summarize a single markdown document and rebuild the retrieval index."""
-    from rag.embeddings import Embedder
     from rag.llm import LLMClient
 
     ensure_dirs(settings)
@@ -147,10 +179,6 @@ def summarize_single_doc(settings: Settings, source_path: Path | None = None) ->
 
     print(f"Summarizing document: {source_path.name}")
     summarize_document(llm, settings, document)
-    build_index(settings)
-
-    embedder = Embedder(settings.embedding_model)
-    save_store("summaries", make_records(settings.summary_dir, "summary", settings), embedder, settings)
-    save_store("memory", make_records(settings.memory_dir, "memory", settings), embedder, settings)
+    rebuild_vector_stores(settings)
 
     return summary_path_for(source_path, settings.summary_dir)
