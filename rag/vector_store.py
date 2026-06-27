@@ -33,6 +33,16 @@ class FaissStore:
         self.index = index
         self.records = records
 
+    def add(self, vectors: Any, records: list[ChunkRecord]) -> None:
+        """Append normalized vectors and metadata records to a loaded store."""
+        if self.index is None:
+            raise ValueError("Vector store is not loaded.")
+        if len(records) == 0 or vectors.size == 0:
+            return
+
+        self.index.add(vectors)
+        self.records.extend(records)
+
     def save(self) -> None:
         """Persist the FAISS index and chunk metadata to disk."""
         import faiss

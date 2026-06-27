@@ -15,7 +15,7 @@ class Settings:
     summary_dir: Path = SUMMARY_DIR
     vector_dir: Path = VECTOR_DIR
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    embedding_local_files_only: bool = True
+    embedding_local_files_only: bool = False
     llm_model: str = "gpt-4o-mini"
     chunk_size: int = 2200
     chunk_overlap: int = 250
